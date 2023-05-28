@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cliente do Jogo Multiplayer</title>
+</head>
+<body>
+  <h1>Cliente do Jogo Multiplayer</h1>
+  <div id="gameArea">
+    <h2>Palavra Atual: <span id="wordDisplay"></span></h2>
+    <input type="text" id="typedWordInput" placeholder="Digite a palavra e pressione Enter">
+    <h2>Pontuação:</h2>
+    <ul id="scoreDisplay"></ul>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Elementos da interface do jogo
+    const wordDisplay = document.getElementById("wordDisplay");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+
+    // Evento para receber uma nova palavra
+    socket.on("newWord", (word) => {
+      wordDisplay.textContent = word;
+    });
+
+    // Evento para atualizar a pontuação dos jogadores
+    socket.on("updateScores", (players) => {
+      scoreDisplay.innerHTML = "";
+
+      for (const playerId in players) {
+        const player = players[playerId];
+        const playerScoreElement = document.createElement("li");
+        playerScoreElement.textContent = `Jogador ${playerId}: ${player.score} pontos`;
+        scoreDisplay.appendChild(playerScoreElement);
+      }
+    });
+
+    // Evento para enviar a palavra digitada para o servidor
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        const typedWord = document.getElementById("typedWordInput").value;
+        socket.emit("typedWord", typedWord);
+        document.getElementById("typedWordInput").value = "";
+      }
+    });
+  </script>
+</body>
+</html>
