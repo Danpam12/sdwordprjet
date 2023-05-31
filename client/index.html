@@ -14,7 +14,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    const socket = io("http://localhost:3004");
 
     // Elementos da interface do jogo
     const wordDisplay = document.getElementById("wordDisplay");
@@ -35,6 +35,21 @@
         playerScoreElement.textContent = `Jogador ${playerId}: ${player.score} pontos`;
         scoreDisplay.appendChild(playerScoreElement);
       }
+    });
+
+    // Evento "startGame" recebido do servidor
+    socket.on("startGame", (word) => {
+      console.log("O jogo começou!");
+      wordDisplay.textContent = word;
+      document.getElementById("typedWordInput").disabled = false;
+      document.getElementById("typedWordInput").focus();
+    });
+
+    // Evento "stopGame" recebido do servidor
+    socket.on("stopGame", () => {
+      console.log("O jogo parou!");
+      wordDisplay.textContent = "";
+      document.getElementById("typedWordInput").disabled = true;
     });
 
     // Evento para enviar a palavra digitada para o servidor
