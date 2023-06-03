@@ -1,10 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Cliente do Jogo Multiplayer</title>
+  <title>Jogo Multiplayer</title>
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      width: 300px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Cliente do Jogo Multiplayer</h1>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Informe seu nome:</h2>
+      <input type="text" id="nameInput">
+      <button id="nameButton">Enviar</button>
+    </div>
+  </div>
+
+  <h1>Jogo Multiplayer</h1>
   <div id="gameArea">
     <h2>Palavra Atual: <span id="wordDisplay"></span></h2>
     <input type="text" id="typedWordInput" placeholder="Digite a palavra e pressione Enter">
@@ -19,6 +48,21 @@
     // Elementos da interface do jogo
     const wordDisplay = document.getElementById("wordDisplay");
     const scoreDisplay = document.getElementById("scoreDisplay");
+    const modal = document.getElementById("modal");
+    const nameInput = document.getElementById("nameInput");
+    const nameButton = document.getElementById("nameButton");
+
+    // Esconder o modal inicialmente
+    modal.style.display = "none";
+
+    // Evento para exibir o modal e solicitar o nome do jogador
+    nameButton.addEventListener("click", () => {
+      const playerName = nameInput.value.trim();
+      if (playerName !== "") {
+        socket.emit("setPlayerName", playerName); // Enviar o nome do jogador para o servidor
+        modal.style.display = "none";
+      }
+    });
 
     // Evento para receber uma nova palavra
     socket.on("newWord", (word) => {
@@ -31,8 +75,11 @@
 
       for (const playerId in players) {
         const player = players[playerId];
+        const playerName = player.name;
+        const playerScore = player.score;
+
         const playerScoreElement = document.createElement("li");
-        playerScoreElement.textContent = `Jogador ${playerId}: ${player.score} pontos`;
+        playerScoreElement.textContent = `Jogador ${playerName}: ${playerScore} pontos`;
         scoreDisplay.appendChild(playerScoreElement);
       }
     });
@@ -60,6 +107,13 @@
         document.getElementById("typedWordInput").value = "";
       }
     });
+
+    // Exibir o modal ao carregar a página
+    window.addEventListener("load", () => {
+      modal.style.display = "block";
+      nameInput.focus();
+    });
   </script>
 </body>
 </html>
+
