@@ -124,7 +124,7 @@ io.on("connection", (socket) => {
       runCrawler(); // Iniciar o crawler para obter as palavras atualizadas
       setTimeout(() => {
         updateCurrentWord(); // Atualizar a palavra atual após um pequeno atraso
-      }, 10); // Tempo em milissegundos antes de atualizar a palavra 
+      }, 1000); // Tempo em milissegundos antes de atualizar a palavra 
     }
   });
 
@@ -147,12 +147,13 @@ io.on("connection", (socket) => {
           console.log("Dados do jogador inseridos no banco de dados.");
         }
       });
-
+      
       // Escolher uma nova palavra aleatória
       currentWord = getRandomWord();
       io.emit("newWord", currentWord); // Enviar a nova palavra para todos os jogadores
     }
   });
+  
 
   // Evento de desconexão do jogador
   socket.on("disconnect", () => {

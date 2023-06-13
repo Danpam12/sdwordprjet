@@ -12,16 +12,51 @@
       width: 100%;
       height: 100%;
       overflow: auto;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgb(248, 232, 232);
     }
 
     .modal-content {
-      background-color: #fff;
+      background-color: #413fa5;
       margin: 10% auto;
       padding: 20px;
       width: 300px;
       border-radius: 8px;
     }
+    .modal-content h2 {
+      color: rgb(235, 235, 247);
+    }
+
+    #wordContainer {
+      height: 400px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .fallingWord {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+    }
+    .fallingWord {
+  position: absolute;
+  left: 0;
+  top: -50px; /* Inicialmente, posicionado acima do contêiner */
+  transition: top 15s linear;
+  animation: fallingAnimation 25s linear infinite; /* Adiciona a animação de queda */
+  font-size: 24px; /* Tamanho da fonte aumentado */
+  color: red; /* Cor da fonte definida como vermelho */
+}
+
+
+@keyframes fallingAnimation {
+  0% {
+    top: -50px; /* Inicialmente, posicionado acima do contêiner */
+  }
+  100% {
+    top: 100vh; /* Termina na parte inferior da tela */
+  }
+}
+
   </style>
 </head>
 <body>
@@ -35,7 +70,10 @@
 
   <h1>Jogo Multiplayer</h1>
   <div id="gameArea">
-    <h2>Palavra Atual: <span id="wordDisplay"></span></h2>
+    <div id="wordContainer">
+      <h2></h2>
+      <div id="fallingWords"></div>
+    </div>
     <input type="text" id="typedWordInput" placeholder="Digite a palavra e pressione Enter">
     <h2>Pontuação:</h2>
     <ul id="scoreDisplay"></ul>
@@ -46,7 +84,8 @@
     const socket = io("http://localhost:3004");
 
     // Elementos da interface do jogo
-    const wordDisplay = document.getElementById("wordDisplay");
+    const wordContainer = document.getElementById("wordContainer");
+    const fallingWordsContainer = document.getElementById("fallingWords");
     const scoreDisplay = document.getElementById("scoreDisplay");
     const modal = document.getElementById("modal");
     const nameInput = document.getElementById("nameInput");
@@ -64,9 +103,28 @@
       }
     });
 
-    // Evento para receber uma nova palavra
+    function createFallingWord(word) {
+  const wordElement = document.createElement("span");
+  wordElement.textContent = word;
+  wordElement.classList.add("fallingWord");
+
+  const randomPosition = Math.random() * 90; // Posição horizontal aleatória
+  const fallingSpeed = 1.5; // Velocidade de queda (ajuste este valor)
+
+  wordElement.style.left = randomPosition + "%";
+  wordElement.style.animationDuration = fallingSpeed + "s";
+
+  document.body.appendChild(wordElement);
+
+  setTimeout(() => {
+    wordElement.remove();
+  }, fallingSpeed * 1000);
+}
+
+
+    // Evento "newWord" recebido do servidor
     socket.on("newWord", (word) => {
-      wordDisplay.textContent = word;
+      createFallingWord(word);
     });
 
     // Evento para atualizar a pontuação dos jogadores
@@ -85,17 +143,15 @@
     });
 
     // Evento "startGame" recebido do servidor
-    socket.on("startGame", (word) => {
+    socket.on("startGame", () => {
       console.log("O jogo começou!");
-      wordDisplay.textContent = word;
       document.getElementById("typedWordInput").disabled = false;
       document.getElementById("typedWordInput").focus();
     });
 
     // Evento "stopGame" recebido do servidor
     socket.on("stopGame", () => {
-      console.log("O jogo parou!");
-      wordDisplay.textContent = "";
+      console.log("O jnogo parou!");
       document.getElementById("typedWordInput").disabled = true;
     });
 
@@ -115,4 +171,4 @@
     });
   </script>
 </body>
-</html>   
+</html>
