@@ -2,7 +2,6 @@ const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
 const mysql = require("mysql2");
-const puppeteer = require('puppeteer');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +22,7 @@ db.connect((err) => {
     console.error("Erro ao conectar ao banco de dados: " + err.message);
   } else {
     console.log("Conexão bem-sucedida ao banco de dados.");
+    loadWordList(); // Carrega a lista de palavras do banco de dados após a conexão ser estabelecida
   }
 });
 
@@ -39,6 +39,7 @@ let wordList = [];
 let scoreBoard = {}; // Objeto para armazenar a pontuação dos jogadores
 let gameStarted = false; // Variável para controlar se o jogo foi iniciado
 let currentWord = ""; // Palavra atual para digitação
+let readyToStart = false; // Variável para controlar se o jogo está pronto para começar
 
 // Função para escolher uma palavra aleatória da lista
 function getRandomWord() {
@@ -46,41 +47,22 @@ function getRandomWord() {
   return wordList[randomIndex];
 }
 
-// Função para realizar o crawling das palavras
-async function runCrawler() {
-  // Inicializa o navegador Puppeteer
-  const browser = await puppeteer.launch({ headless: "new" });
-  const page = await browser.newPage();
+// Função para carregar a lista de palavras do banco de dados
+function loadWordList() {
+  const selectQuery = "SELECT word FROM words";
+  db.query(selectQuery, (err, results) => {
+    if (err) {
+      console.error("Erro ao carregar a lista de palavras do banco de dados: " + err.message);
+    } else {
+      wordList = results.map((row) => row.word.toLowerCase());
+      console.log("Lista de palavras carregada do banco de dados: ", wordList);
 
-  // Acessa a página web alvo
-  await page.goto('https://g1.globo.com/');
-
-  // Extrai os títulos dos artigos
-  const articleTitles = await page.evaluate(() => {
-    const titles = [];
-    const articleElements = document.querySelectorAll('a.feed-post-link');
-
-
-    for (let i = 0; i < articleElements.length; i++) {
-      const titleWords = articleElements[i].textContent.split(' ');
-      titles.push(...titleWords);
-
+      // Verifica se o jogo está em andamento e atualiza a palavra atual
+      if (gameStarted) {
+        updateCurrentWord();
+      }
     }
-
-    return titles;
   });
-
-  // Fecha o navegador Puppeteer
-  await browser.close();
-
-  // Atualiza a lista de palavras com os títulos obtidos pelo crawler
-  wordList = articleTitles;
-  console.log("Lista de palavras atualizada: ", wordList);
-
-  // Verifica se o jogo está em andamento e atualiza a palavra atual
-  if (gameStarted) {
-    updateCurrentWord();
-  }
 }
 
 // Função para atualizar a palavra atual do jogo
@@ -120,11 +102,22 @@ io.on("connection", (socket) => {
 
     // Verificar se há dois jogadores conectados para iniciar o jogo
     if (Object.keys(players).length >= 2 && !gameStarted) {
-      gameStarted = true;
-      runCrawler(); // Iniciar o crawler para obter as palavras atualizadas
-      setTimeout(() => {
-        updateCurrentWord(); // Atualizar a palavra atual após um pequeno atraso
-      }, 1000); // Tempo em milissegundos antes de atualizar a palavra 
+      readyToStart = true; // Ponto 2: O jogo está pronto para começar
+      io.emit("readyToStart", true); // Envia um evento para todos os jogadores indicando que o jogo está pronto para começar
+
+      // Iniciar a contagem regressiva
+      let countdown = 3; // Definir o tempo de contagem regressiva em segundos
+      io.emit("countdown", countdown); // Enviar o valor inicial do contador para todos os jogadores
+
+      const countdownInterval = setInterval(() => {
+        countdown--;
+        io.emit("countdown", countdown); // Enviar o novo valor do contador para todos os jogadores
+
+        if (countdown === 0) {
+          clearInterval(countdownInterval);
+          startGame(); // Iniciar o jogo após a contagem regressiva
+        }
+      }, 1000);
     }
   });
 
@@ -147,13 +140,12 @@ io.on("connection", (socket) => {
           console.log("Dados do jogador inseridos no banco de dados.");
         }
       });
-      
+
       // Escolher uma nova palavra aleatória
       currentWord = getRandomWord();
       io.emit("newWord", currentWord); // Enviar a nova palavra para todos os jogadores
     }
   });
-  
 
   // Evento de desconexão do jogador
   socket.on("disconnect", () => {
@@ -170,3 +162,28 @@ io.on("connection", (socket) => {
     }
   });
 });
+
+function startGame() {
+  if (readyToStart) {
+    gameStarted = true;
+    readyToStart = false;
+
+    // Escolher a primeira palavra aleatória
+    currentWord = getRandomWord();
+    io.emit("startGame", currentWord); // Enviar o sinal de início do jogo e a primeira palavra para todos os jogadores
+
+    // Iniciar o envio de palavras a cada segundo
+    const wordInterval = setInterval(() => {
+      currentWord = getRandomWord();
+      io.emit("newWord", currentWord); // Enviar a nova palavra para todos os jogadores
+    }, 1000);
+
+    // Definir a duração do jogo em segundos (por exemplo, 60 segundos)
+    const gameDuration = 60;
+    setTimeout(() => {
+      clearInterval(wordInterval);
+      gameStarted = false;
+      io.emit("stopGame"); // Enviar o sinal para parar o jogo para todos os jogadores
+    }, gameDuration * 1000);
+  }
+}

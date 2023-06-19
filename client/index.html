@@ -38,28 +38,32 @@
       bottom: 0;
     }
     .fallingWord {
-  position: absolute;
-  left: 0;
-  top: -50px; /* Inicialmente, posicionado acima do contêiner */
-  transition: top 15s linear;
-  animation: fallingAnimation 25s linear infinite; /* Adiciona a animação de queda */
-  font-size: 24px; /* Tamanho da fonte aumentado */
-  color: red; /* Cor da fonte definida como vermelho */
-}
+      position: absolute;
+      left: 0;
+      top: -50px; /* Inicialmente, posicionado acima do contêiner */
+      transition: top 15s linear;
+      animation: fallingAnimation 25s linear infinite; /* Adiciona a animação de queda */
+      font-size: 24px; /* Tamanho da fonte aumentado */
+      color: red; /* Cor da fonte definida como vermelho */
+    }
 
+    @keyframes fallingAnimation {
+      0% {
+        top: -50px; /* Inicialmente, posicionado acima do contêiner */
+      }
+      100% {
+        top: 100vh; /* Termina na parte inferior da tela */
+      }
+    }
 
-@keyframes fallingAnimation {
-  0% {
-    top: -50px; /* Inicialmente, posicionado acima do contêiner */
-  }
-  100% {
-    top: 100vh; /* Termina na parte inferior da tela */
-  }
-}
-
+    #gameArea {
+      background-image: url('telafundo.avif');
+      background-size: cover;
+      background-position: center;
+    }
   </style>
 </head>
-<body>
+<body >
   <div class="modal" id="modal">
     <div class="modal-content">
       <h2>Informe seu nome:</h2>
@@ -104,23 +108,22 @@
     });
 
     function createFallingWord(word) {
-  const wordElement = document.createElement("span");
-  wordElement.textContent = word;
-  wordElement.classList.add("fallingWord");
+      const wordElement = document.createElement("span");
+      wordElement.textContent = word;
+      wordElement.classList.add("fallingWord");
 
-  const randomPosition = Math.random() * 90; // Posição horizontal aleatória
-  const fallingSpeed = 1.5; // Velocidade de queda (ajuste este valor)
+      const randomPosition = Math.random() * 90; // Posição horizontal aleatória
+      const fallingSpeed = 1.5; // Velocidade de queda (ajuste este valor)
 
-  wordElement.style.left = randomPosition + "%";
-  wordElement.style.animationDuration = fallingSpeed + "s";
+      wordElement.style.left = randomPosition + "%";
+      wordElement.style.animationDuration = fallingSpeed + "s";
 
-  document.body.appendChild(wordElement);
+      document.body.appendChild(wordElement);
 
-  setTimeout(() => {
-    wordElement.remove();
-  }, fallingSpeed * 1000);
-}
-
+      setTimeout(() => {
+        wordElement.remove();
+      }, fallingSpeed * 1000);
+    }
 
     // Evento "newWord" recebido do servidor
     socket.on("newWord", (word) => {
@@ -142,6 +145,29 @@
       }
     });
 
+    // Evento "readyToStart" recebido do servidor
+    socket.on("readyToStart", (countdownDuration) => {
+      // Contagem regressiva para iniciar o jogo
+      let count = countdownDuration;
+      const countdownElement = document.createElement("h2");
+      countdownElement.style.color = "red";
+      countdownElement.style.textAlign = "center";
+      countdownElement.textContent = `Iniciando em ${count}...`;
+      gameArea.appendChild(countdownElement);
+
+      const countdownInterval = setInterval(() => {
+        count--;
+        countdownElement.textContent = `Iniciando em ${count}...`;
+
+        if (count <= 0) {
+          clearInterval(countdownInterval);
+          gameArea.removeChild(countdownElement);
+          // Enviar evento para iniciar o jogo para o servidor
+          socket.emit("startGame");
+        }
+      }, 1000);
+    });
+
     // Evento "startGame" recebido do servidor
     socket.on("startGame", () => {
       console.log("O jogo começou!");
@@ -151,7 +177,7 @@
 
     // Evento "stopGame" recebido do servidor
     socket.on("stopGame", () => {
-      console.log("O jnogo parou!");
+      console.log("O jogo parou!");
       document.getElementById("typedWordInput").disabled = true;
     });
 
@@ -172,3 +198,4 @@
   </script>
 </body>
 </html>
+
