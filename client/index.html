@@ -12,37 +12,60 @@
       width: 100%;
       height: 100%;
       overflow: auto;
-      background-color: rgb(248, 232, 232);
+      background-color: rgb(146, 91, 197);
     }
 
     .modal-content {
-      background-color: #413fa5;
+      background-image: url('bgfundo.avif');
       margin: 10% auto;
       padding: 20px;
-      width: 300px;
+      width: 400px;
+      height: 400px;
       border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
+
+.modal-content input {
+  margin: 10px;
+  width: 50vh;
+  height: 5vh;
+  border-radius: 10px;
+  background-color: rgb(245, 242, 248);
+  border: none;
+}
+
+.modal-content button {
+  margin: 5px;
+  width: 10vh;
+  height: 5vh;
+  border-radius: 10px;
+  background-color: rgb(245, 242, 248);
+  border: none;
+}
+    
     .modal-content h2 {
       color: rgb(235, 235, 247);
+      text-align: center;
+      font-family: 'Bebas Neue', sans-serif;
+      top: ;
     }
 
     #wordContainer {
-      height: 400px;
       overflow: hidden;
       position: relative;
+      height: 100%;
     }
 
-    .fallingWord {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-    }
     .fallingWord {
       position: absolute;
       left: 0;
       top: -50px; /* Inicialmente, posicionado acima do contêiner */
       transition: top 15s linear;
-      animation: fallingAnimation 25s linear infinite; /* Adiciona a animação de queda */
+      animation: fallingAnimation 15s linear infinite; /* Adiciona a animação de queda */
       font-size: 24px; /* Tamanho da fonte aumentado */
       color: red; /* Cor da fonte definida como vermelho */
     }
@@ -52,36 +75,84 @@
         top: -50px; /* Inicialmente, posicionado acima do contêiner */
       }
       100% {
-        top: 100vh; /* Termina na parte inferior da tela */
+        top: 100%; /* Termina na parte inferior da tela */
       }
     }
 
-    #gameArea {
-      background-image: url('telafundo.avif');
-      background-size: cover;
-      background-position: center;
-    }
+  body {
+  margin: 0;
+  overflow: hidden;
+  background-color: rgb(146, 91, 197);
+}
+
+#gameArea {
+  background-image: url('bgfundo.avif');
+  background-size: cover;
+  background-position: center;
+  height: 100vh;
+  width: 350px;
+  margin: 0 auto;
+  overflow: auto;
+  position: relative;
+}
+
+#scoreContainer {
+  position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      padding: 10px;
+}
+
+#typedWordInput {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50vh;
+  height: 5vh;
+  border-radius: 10px;
+  background-color: rgb(245, 242, 248);
+  border: none;
+}
+
+#typedWordInput::placeholder {
+  color:rgb(46, 45, 45);
+}
+
+.gameTitle {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px; /* Tamanho da fonte */
+  color: white; /* Cor do texto */
+  text-align: center;
+}
+
   </style>
 </head>
-<body >
+<body>
   <div class="modal" id="modal">
     <div class="modal-content">
-      <h2>Informe seu nome:</h2>
+      <h1 class="gameTitle">Jogo Multiplayer</h1>
+      <h2>Informe seu nome</h2>
       <input type="text" id="nameInput">
       <button id="nameButton">Enviar</button>
     </div>
   </div>
 
-  <h1>Jogo Multiplayer</h1>
+  
   <div id="gameArea">
     <div id="wordContainer">
-      <h2></h2>
-      <div id="fallingWords"></div>
+      <div id="fallingWords"></div> <!-- Adicione o ID "fallingWords" ao contêiner das palavras em queda -->
     </div>
-    <input type="text" id="typedWordInput" placeholder="Digite a palavra e pressione Enter">
+    <input type="text" id="typedWordInput"  placeholder="Digite a palavra e pressione Enter">
+  </div>
+
+  <div id="scoreContainer">
     <h2>Pontuação:</h2>
     <ul id="scoreDisplay"></ul>
   </div>
+
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -113,16 +184,16 @@
       wordElement.classList.add("fallingWord");
 
       const randomPosition = Math.random() * 90; // Posição horizontal aleatória
-      const fallingSpeed = 1.5; // Velocidade de queda (ajuste este valor)
+      const fallingSpeed = 6; // Velocidade de queda (ajuste este valor)
 
       wordElement.style.left = randomPosition + "%";
       wordElement.style.animationDuration = fallingSpeed + "s";
 
-      document.body.appendChild(wordElement);
+      fallingWordsContainer.appendChild(wordElement); // Adicione a palavra ao contêiner das palavras em queda
 
       setTimeout(() => {
         wordElement.remove();
-      }, fallingSpeed * 1000);
+      }, fallingSpeed * 6000);
     }
 
     // Evento "newWord" recebido do servidor
@@ -143,6 +214,12 @@
         playerScoreElement.textContent = `Jogador ${playerName}: ${playerScore} pontos`;
         scoreDisplay.appendChild(playerScoreElement);
       }
+    });
+
+     // Evento "updateScores" recebido do servidor
+     socket.on("updateScores", (updatedPlayers) => {
+      players = updatedPlayers;
+      updateScores();
     });
 
     // Evento "readyToStart" recebido do servidor
@@ -198,4 +275,3 @@
   </script>
 </body>
 </html>
-
