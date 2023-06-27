@@ -24,10 +24,11 @@ async function crawler() {
 
     // Conecta-se ao banco de dados
     const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'pam',
-      password: '123',
-      database: 'game_db'
+      host: "127.0.0.1",
+      user: "root",
+      password: "root",
+      database: "game_db",
+      port: 3307
     });
 
     // Insere as palavras no banco de dados

@@ -28,27 +28,24 @@ db.connect((err) => {
 });
 
 // Configuração do servidor e conexão com Socket.io
-server.listen(3004, () => {
-  console.log("Server running on port 3004");
+server.listen(3030, () => {
+  console.log("Server running on port 3030");
 });
 
-// Configuração de rota para servir arquivos estáticos
 app.use(express.static(__dirname + "/client"));
-
 const players = {}; // Objeto para armazenar os jogadores conectados
+
 let wordList = [];
-let scoreBoard = {}; // Objeto para armazenar a pontuação dos jogadores
 let gameStarted = false; // Variável para controlar se o jogo foi iniciado
 let currentWord = ""; // Palavra atual para digitação
 let readyToStart = false; // Variável para controlar se o jogo está pronto para começar
 
-// Função para escolher uma palavra aleatória da lista
+
 function getRandomWord() {
   const randomIndex = Math.floor(Math.random() * wordList.length);
   return wordList[randomIndex];
 }
 
-// Função para carregar a lista de palavras do banco de dados
 function loadWordList() {
   const selectQuery = "SELECT word FROM words";
   db.query(selectQuery, (err, results) => {
@@ -66,27 +63,21 @@ function loadWordList() {
   });
 }
 
-// Função para atualizar a palavra atual do jogo
-function updateCurrentWord() {
-  currentWord = getRandomWord();
-  io.emit("newWord", currentWord); // Enviar a nova palavra para todos os jogadores
+function generatePlayerId(socketId) {
+  // let hash = 0;
+  // for (let i = 0; i < socketId.length; i++) {
+  //   const char = socketId.charCodeAt(i);
+  //   hash = ((hash << 5) - hash) + char;
+  //   hash |= 0; // Converter para inteiro de 32 bits
+  // }
+  // return hash;
+  return new Date().getTime();
 }
 
-// Função para gerar um valor hash para o player_id
-function generatePlayerId(socketId) {
-  let hash = 0;
-  for (let i = 0; i < socketId.length; i++) {
-    const char = socketId.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Converter para inteiro de 32 bits
-  }
-  return hash;
-}
 
 io.on("connection", (socket) => {
   console.log(`Novo jogador ${socket.id} conectado`);
 
-  // Lógica do jogo, pontuação, ranking, etc.
   const playerId = generatePlayerId(socket.id);
 
   players[playerId] = {
@@ -100,6 +91,7 @@ io.on("connection", (socket) => {
 
     // Inserir o jogador no banco de dados
     const insertQuery = `INSERT INTO scores (player_id, score) VALUES (${playerId}, ${players[playerId].score})`;
+    db.query(insertQuery);
 
     // Verificar se há dois jogadores conectados para iniciar o jogo
     if (Object.keys(players).length >= 2 && !gameStarted) {
@@ -118,52 +110,12 @@ io.on("connection", (socket) => {
           clearInterval(countdownInterval);
           startGame(); // Iniciar o jogo após a contagem regressiva
         }
-      }, 5000);
+      }, 1000);
     }
   });
 
-  // Eventos de digitação de palavras
-  socket.on("typedWord", (typedWord) => {
-    console.log({ typedWord })
-    if (gameStarted && typedWord === currentWord) {
-      // Atualizar a pontuação do jogador
-      players[playerId].score += 1;
-      io.emit("updateScores", players); // Enviar a nova pontuação para todos os jogadores
-
-      // Inserir os dados do jogador e pontuação no banco de dados
-      const playerName = players[playerId].name;
-      const score = players[playerId].score;
-
-      const insertQuery = `INSERT INTO scores (player_id, player_name, score) VALUES (${playerId}, '${playerName}', ${score})`;
-      db.query(insertQuery, (err, result) => {
-        if (err) {
-          console.error("Erro ao inserir dados no banco de dados: " + err.message);
-        } else {
-          console.log("Dados do jogador inseridos no banco de dados.");
-        }
-      });
-
-      // Escolher uma nova palavra aleatória
-      currentWord = getRandomWord();
-      io.emit("newWord", currentWord); // Enviar a nova palavra para todos os jogadores
-    }
-  });
-
-  // Evento de desconexão do jogador
-  socket.on("disconnect", () => {
-    console.log(`Jogador ${socket.id} desconectado`);
-
-    // Remover o jogador da lista de jogadores e atualizar o ranking
-    delete players[playerId];
-    io.emit("updateScores", players);
-
-    // Verificar se o jogo precisa ser interrompido por falta de jogadores
-    if (Object.keys(players).length < 2 && gameStarted) {
-      gameStarted = false;
-      io.emit("stopGame"); // Envia um evento para parar o jogo para todos os jogadores
-    }
-  });
 });
+
 
 function startGame() {
   if (readyToStart) {
